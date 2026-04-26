@@ -1,0 +1,15 @@
+{
+  "name": "D&Disc Golf",
+  "short_name": "D&Disc",
+  "display": "standalone",
+  "background_color": "#2a1a0e",
+  "theme_color": "#2a1a0e",
+  "start_url": ".",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
