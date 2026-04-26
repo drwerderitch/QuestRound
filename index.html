@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="apple-mobile-web-app-title" content="D&amp;Disc Golf"/>
-  <title>D&amp;Disc Golf</title>
+  <meta name="apple-mobile-web-app-title" content="QuestRound"/>
+  <title>QuestRound</title>
   <link rel="apple-touch-icon" href="icon.png"/>
   <link rel="icon" type="image/png" href="icon.png"/>
   <link rel="manifest" href="manifest.json"/>
@@ -1197,7 +1197,7 @@ function App(){
 
     // ── CODEX TAB ──────────────────────────────────────────────────────────
     tab==="codex"&&React.createElement('div',{className:"fi"},
-      hdr("DISC GOLF DUNGEON","📜 CODEX"),
+      hdr("QUEST ROUND","📜 CODEX"),
       !docSec?React.createElement('div',{style:{padding:"0 16px"}},
         [["rules","📖","Rulebook"],["classes","⚔️","Classes"],["prestige","🎲","Prestige"],["items","🎒","Items"],["treasure","🗝️","Treasure"],["about","❓","About"]].map(([id,ic,t])=>(
           React.createElement('button',{key:id,onClick:()=>setDocSec(id),style:{width:"100%",background:C.bgCard,border:`4px solid ${C.borderBright}`,borderRadius:0,padding:"14px",marginBottom:"8px",textAlign:"left",cursor:"pointer",display:"flex",alignItems:"center",gap:"12px",boxShadow:bevel(C.borderBright)}},
@@ -1296,7 +1296,7 @@ function App(){
       )
     ),
     tab==="party"&&React.createElement('div',{className:"fi"},
-      hdr("DISC GOLF DUNGEON","👥 PARTY"),
+      hdr("QUEST ROUND","👥 PARTY"),
 
       partyView==="list"&&React.createElement('div',{style:{padding:"0 16px"}},
         allPlayers.map(p=>(
@@ -1571,7 +1571,7 @@ function App(){
     // ── QUEST TAB ──────────────────────────────────────────────────────────
     tab==="adventure"&&React.createElement('div',{className:"fi"},
       questView==="manager"&&React.createElement('div',null,
-        hdr("DISC GOLF","DUNGEON"),
+        hdr("","QUEST ROUND"),
         React.createElement('div',{style:{padding:"0 16px"}},
           allPlayers.length===0?React.createElement('div',{style:{textAlign:"center",padding:"30px 0"}},
             React.createElement('div',{style:{fontSize:"28px",marginBottom:"10px"}},"⚔️"),
