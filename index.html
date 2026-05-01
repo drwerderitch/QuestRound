@@ -384,7 +384,7 @@ function CardOverlay({
   holeScores,setHoleScores,cardMeta,setCardMeta,
   // props that were previously missing (caused crashes):
   drawBoon,drawPeril,applyGoldToAll,applyGoldToPlayer,applyTokensToAll,
-  setPlayerField,questPlayersFromQuest,activeQuestId
+  setPlayerField,questPlayersFromQuest,activeQuestId,setAndSaveQuests
 }){
   const ds={
     adventure:{border:C.gold,accent:C.gold,label:"ENCOUNTER"},
@@ -722,6 +722,37 @@ function CardOverlay({
           React.createElement('div',{style:{fontFamily:BF,fontSize:"13px",color:C.whiteDim}},"💰",p.gold," ✦",p.xp," 🛡",p.tokens)
         )
       ))
+    ),
+
+    // Safe Passage peek phase
+    phase==="peek"&&cardMeta.peekCard&&React.createElement(React.Fragment,null,
+      React.createElement('div',{style:{fontFamily:BF,fontSize:"13px",color:cardMeta.isConsequence?C.orange:C.green,marginBottom:"8px",letterSpacing:2}},cardMeta.isConsequence?"⚡ QUEUED CONSEQUENCE":"👁 NEXT ENCOUNTER"),
+      cardMeta.isConsequence&&React.createElement('div',{style:{fontFamily:BF,fontSize:"11px",color:C.greyDim,marginBottom:"8px"}},"A consequence is queued for next hole. You can clear it."),
+      React.createElement('div',{style:{background:C.bgDark,border:"2px solid "+(cardMeta.isConsequence?C.orange:C.gold)+"44",borderRadius:0,padding:"12px",marginBottom:"12px"}},
+        React.createElement('div',{style:{fontFamily:BF,fontSize:"14px",color:cardMeta.isConsequence?C.orange:C.gold,marginBottom:"4px"}},cardMeta.peekCard.title),
+        cardMeta.peekCard.tags&&React.createElement('div',{style:{fontFamily:BF,fontSize:"11px",color:C.greyDim,marginBottom:"6px"}},cardMeta.peekCard.tags),
+        React.createElement('div',{style:{fontFamily:BF,fontSize:"12px",color:C.parchment,fontStyle:"italic",marginBottom:"6px"}},cardMeta.peekCard.flavor),
+        React.createElement('div',{style:{fontFamily:BF,fontSize:"12px",color:C.whiteDim}},cardMeta.peekCard.effect)
+      ),
+      React.createElement('div',{style:{display:"flex",gap:"10px"}},
+        React.createElement('button',{onClick:()=>{
+          onDismiss();
+        },style:{flex:1,padding:"14px 0",background:C.green+"18",border:"3px solid "+C.green,borderRadius:0,color:C.green,fontFamily:BF,fontSize:"13px",cursor:"pointer"}},"✓ KEEP IT"),
+        React.createElement('button',{onClick:()=>{
+          if(cardMeta.isConsequence){
+            // Clear the queued consequence entirely
+            setAndSaveQuests(qs=>qs.map(q=>q.id===activeQuestId?{...q,nextAdventureCard:null}:q));
+          } else {
+            // Shuffle it back into the deck
+            const deck=[...cardMeta.peekDeck];
+            const top=deck.shift();
+            const insertAt=1+Math.floor(Math.random()*deck.length);
+            deck.splice(insertAt,0,top);
+            setAD(deck);
+          }
+          onDismiss();
+        },style:{flex:1,padding:"14px 0",background:C.red+"18",border:"3px solid "+C.red,borderRadius:0,color:C.red,fontFamily:BF,fontSize:"13px",cursor:"pointer"}},cardMeta.isConsequence?"✗ CLEAR IT":"🔀 SHUFFLE BACK")
+      )
     ),
 
     // Treasure assign
@@ -1185,6 +1216,20 @@ function App(){
       const tm=text.match(/[Gg]ain\s+(\d+)\s*(stored\s+)?advantage token/i);
       const drawTreasure=/[Dd]raw\s+a\s+treasure/i.test(text);
       const drawBoonFlag=/[Dd]raw\s+(one\s+additional|a)\s+[Bb]oon/i.test(text);
+      // Safe Passage — peek at next adventure card (or queued consequence)
+      if(card.title==="Safe Passage"&&cardDeck==="boon"){
+        const queuedConsequence=activeQuest&&activeQuest.nextAdventureCard;
+        if(queuedConsequence){
+          // Show the queued consequence — can keep or clear it
+          setCardMeta({peekCard:queuedConsequence,peekDeck:null,isConsequence:true});
+        } else {
+          const deck=aD.length?aD:shuffle(ADVENTURE_CARDS);
+          if(!aD.length)setAD(deck);
+          setCardMeta({peekCard:deck[0],peekDeck:[...deck],isConsequence:false});
+        }
+        setCardPhase("peek");
+        return;
+      }
       if(gm) adj(pid,"gold",parseInt(gm[1]));
       if(lm) adj(pid,"gold",-parseInt(lm[1]));
       if(xm) adj(pid,"xp",parseInt(xm[1]));
@@ -1316,7 +1361,7 @@ function App(){
       setCardMeta:(s)=>{setCardMeta(s);if(cardDeck==="adventure"||cardDeck==="consequence")setActiveAdventureCard(prev=>prev?{...prev,meta:typeof s==="function"?s(prev.meta||{}):s}:prev);},
       drawBoon,drawPeril,
       applyGoldToAll,applyGoldToPlayer,applyTokensToAll,setPlayerField,
-      questPlayersFromQuest,activeQuestId,
+      questPlayersFromQuest,activeQuestId,setAndSaveQuests:_setAndSaveQuests,
     }),
 
     // Draw queue
