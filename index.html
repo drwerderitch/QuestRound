@@ -1139,19 +1139,21 @@ function App(){
       // Build draw queue from hole scores
       const queue=[];
       const currentRound=(activeQuest&&activeQuest.currentRound)||1;
+      const resolveMap=getProficiencyMap(card, questPlayersFromQuest);
       questPlayersFromQuest.forEach(p=>{
         const n=holeScores[p.id]||0;
         const newTee=n<0?"blue":n===0?"white":"red";
+        const isProficient=(resolveMap[p.id]||0)>0;
         _setAndSavePlayers(ps=>ps.map(pl=>{
           if(pl.id!==p.id)return pl;
           const hist=[...(pl.scoreHistory||[])];
           const qi=hist.findIndex(r=>r.questId===activeQuestId&&r.roundNumber===currentRound);
           if(qi>=0){
-            const holes=[...hist[qi].holes,{hole,score:n,bottled:!!(holeScores[p.id+"_bottled"])}];
+            const holes=[...hist[qi].holes,{hole,score:n,bottled:!!(holeScores[p.id+"_bottled"]),proficient:isProficient}];
             const total=holes.reduce((a,h)=>a+h.score,0);
             hist[qi]={...hist[qi],holes,total,complete:holes.length>=9};
           } else {
-            hist.push({questId:activeQuestId,roundNumber:currentRound,date:new Date().toLocaleDateString(),holes:[{hole,score:n,bottled:!!(holeScores[p.id+"_bottled"])}],total:n,complete:false});
+            hist.push({questId:activeQuestId,roundNumber:currentRound,date:new Date().toLocaleDateString(),holes:[{hole,score:n,bottled:!!(holeScores[p.id+"_bottled"]),proficient:isProficient}],total:n,complete:false});
           }
           return{...pl,tee:newTee,scoreHistory:hist};
         }));
@@ -1284,7 +1286,7 @@ function App(){
                         const hd=scored.find(h=>h.hole===n);
                         const isCurrentHole=currentHole===n;
                         const cl=!hd?C.greyDim:hd.bottled?C.teal:hd.score<0?C.green:hd.score>0?C.red:C.whiteDim;
-                        return React.createElement('td',{key:n,style:{fontFamily:BF,fontSize:"11px",color:cl,textAlign:"center",padding:"5px 4px",background:isCurrentHole?C.bgCardAlt:C.bgDark,borderLeft:`1px solid ${C.border}33`}},hd?fmt(hd.score):(roundHist&&!roundHist.complete&&n>scored.length)?"✗":"·");
+                        return React.createElement('td',{key:n,style:{fontFamily:BF,fontSize:"11px",color:cl,textAlign:"center",padding:"5px 4px",background:isCurrentHole?C.bgCardAlt:C.bgDark,borderLeft:`1px solid ${C.border}33`,fontWeight:hd&&hd.proficient?"bold":"normal"}},hd?fmt(hd.score):(roundHist&&!roundHist.complete&&n>scored.length)?"✗":"·");
                       }),
                       React.createElement('td',{style:{fontFamily:BF,fontSize:"11px",color:roundTotal<0?C.green:roundTotal>0?C.red:C.whiteDim,textAlign:"center",padding:"5px 4px",background:C.bgCard,borderLeft:`1px solid ${C.border}`}},fmt(roundTotal))
                     );
@@ -1601,7 +1603,7 @@ function App(){
                       holeNums.map(function(h){
                         const hd=holes.find(hh=>hh.hole===h);
                         const cl=!hd?C.greyDim:hd.bottled?C.teal:hd.score<0?C.green:hd.score>0?C.red:C.whiteDim;
-                        return React.createElement('td',{key:h,style:{fontFamily:BF,fontSize:"11px",color:cl,textAlign:"center",padding:"2px 3px",background:C.bgDark,border:`1px solid ${C.border}33`}},hd?fmt(hd.score):(!r.complete&&h>holes.length)?"✗":"·");
+                        return React.createElement('td',{key:h,style:{fontFamily:BF,fontSize:"11px",color:cl,textAlign:"center",padding:"2px 3px",background:C.bgDark,border:`1px solid ${C.border}33`,fontWeight:hd&&hd.proficient?"bold":"normal"}},hd?fmt(hd.score):(!r.complete&&h>holes.length)?"✗":"·");
                       }),
                       React.createElement('td',{style:{fontFamily:BF,fontSize:"11px",color:tcl,textAlign:"center",padding:"2px 3px",background:C.bgDark,borderLeft:`1px solid ${C.border}`}},fmt(total))
                     ))
