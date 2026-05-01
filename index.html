@@ -840,6 +840,7 @@ function App(){
   const [questBoons,setQuestBoons]=useState([]);
   const [showCamp,setShowCamp]=useState(false);
   const [endRoundConfirm,setEndRoundConfirm]=useState(false);
+  const [deleteConfirm,setDeleteConfirm]=useState(false);
   const [errorLog,setErrorLog]=useState(function(){try{return JSON.parse(localStorage.getItem('dgd_errorlog')||'[]');}catch(e){return[];}});
 
   // ── Save helpers ──────────────────────────────────────────────────────────
@@ -1167,6 +1168,8 @@ function App(){
       setActiveAdventureCard(null);
       setCard(null);setCardDeck(null);
       setDrawQueue(queue);
+      // Auto-trigger camp after hole 9 completes
+      if(hole===9) setShowCamp(true);
       return;
     }
 
@@ -1493,7 +1496,7 @@ function App(){
         const xpNeeded=p.level===1?8:p.level===2?9:null;
         const canLevel=xpNeeded&&p.xp>=xpNeeded;
         return React.createElement('div',{style:{padding:"0 16px"}},
-          React.createElement('button',{onClick:()=>setPartyView("list"),style:{background:"transparent",border:"none",color:C.gold,fontFamily:BF,fontSize:"13px",cursor:"pointer",marginBottom:"12px"}},"← PARTY"),
+          React.createElement('button',{onClick:()=>{setDeleteConfirm(false);setPartyView("list");},style:{background:"transparent",border:"none",color:C.gold,fontFamily:BF,fontSize:"13px",cursor:"pointer",marginBottom:"12px"}},"← PARTY"),
           React.createElement('div',{style:{textAlign:"center",marginBottom:"14px"}},
             React.createElement('div',{style:{fontSize:"16px",marginBottom:"4px"}},(p.cls&&p.cls.icon)||"❓"),
             React.createElement('div',{style:{fontFamily:BF,fontSize:"16px",color:(p.cls&&p.cls.color)||C.grey,textShadow:OLH}},p.name),
@@ -1616,7 +1619,14 @@ function App(){
             React.createElement(Btn,{onClick:()=>setPartyView("edit"),bg:C.bgCard,fg:C.grey,border:C.borderBright,style:{flex:1}},"✏️ EDIT"),
             canLevel&&React.createElement(Btn,{onClick:()=>setPartyView("levelup"),bg:C.green+"22",fg:C.green,border:C.green+"55",style:{flex:1}},"⬆ LEVEL UP")
           ),
-          React.createElement('button',{onClick:()=>{_setAndSavePlayers(ps=>ps.filter(x=>x.id!==p.id));setPartyView("list");},style:{width:"100%",padding:"10px 0",marginTop:"8px",background:"transparent",border:`2px solid ${C.red}33`,borderRadius:0,color:C.red,fontFamily:BF,fontSize:"13px",cursor:"pointer"}},"DELETE CHARACTER")
+          !deleteConfirm&&React.createElement('button',{onClick:()=>setDeleteConfirm(true),style:{width:"100%",padding:"10px 0",marginTop:"8px",background:"transparent",border:`2px solid ${C.red}33`,borderRadius:0,color:C.red,fontFamily:BF,fontSize:"13px",cursor:"pointer"}},"DELETE CHARACTER"),
+          deleteConfirm&&React.createElement('div',{style:{marginTop:"8px",background:C.red+"12",border:"1px solid "+C.red+"44",borderRadius:0,padding:"12px"}},
+            React.createElement('div',{style:{fontFamily:BF,fontSize:"12px",color:C.red,marginBottom:"10px"}},"Delete ",p.name,"? This cannot be undone."),
+            React.createElement('div',{style:{display:"flex",gap:"8px"}},
+              React.createElement('button',{onClick:()=>{_setAndSavePlayers(ps=>ps.filter(x=>x.id!==p.id));setDeleteConfirm(false);setPartyView("list");},style:{flex:1,padding:"10px 0",background:C.red+"22",border:"2px solid "+C.red+"66",borderRadius:0,color:C.red,fontFamily:BF,fontSize:"13px",cursor:"pointer"}},"CONFIRM DELETE"),
+              React.createElement('button',{onClick:()=>setDeleteConfirm(false),style:{flex:1,padding:"10px 0",background:"transparent",border:"1px solid "+C.greyDim,borderRadius:0,color:C.greyDim,fontFamily:BF,fontSize:"13px",cursor:"pointer"}},"CANCEL")
+            )
+          )
         );
       })(),
 
@@ -1857,14 +1867,11 @@ function App(){
           ),
           React.createElement('button',{onClick:()=>{
             if(activeAdventureCard) return;
-            if(hole===9){setShowCamp(true);}
-            else{
-              const nh=hole+1;
-              _setAndSaveQuests(qs=>qs.map(q=>q.id===activeQuestId?{...q,hole:nh,perils,aDeck:aD,bDeck:bD,pDeck:pD,bhDeck:bhD,tDeck:tD}:q));
-              updateQuestHole(nh);
-            }
-          },style:{width:"100%",padding:"13px 0",background:C.bgDark,border:"4px solid "+(activeAdventureCard?C.greyDim:hole===9?C.cyan:C.borderBright),borderRadius:0,color:activeAdventureCard?C.greyDim:hole===9?C.cyan:C.whiteDim,fontFamily:BF,fontSize:"13px",cursor:activeAdventureCard?"default":"pointer",letterSpacing:1,opacity:activeAdventureCard?0.4:1}},
-            activeAdventureCard?"RESOLVE ENCOUNTER FIRST":hole===9?"⛺ END OF ROUND — CAMP":"SKIP TO HOLE "+(hole+1)+" →"
+            const nh=hole+1;
+            _setAndSaveQuests(qs=>qs.map(q=>q.id===activeQuestId?{...q,hole:nh,perils,aDeck:aD,bDeck:bD,pDeck:pD,bhDeck:bhD,tDeck:tD}:q));
+            updateQuestHole(nh);
+          },style:{width:"100%",padding:"13px 0",background:C.bgDark,border:"4px solid "+(activeAdventureCard?C.greyDim:C.borderBright),borderRadius:0,color:activeAdventureCard?C.greyDim:C.whiteDim,fontFamily:BF,fontSize:"13px",cursor:activeAdventureCard?"default":"pointer",letterSpacing:1,opacity:activeAdventureCard?0.4:1}},
+            activeAdventureCard?"RESOLVE ENCOUNTER FIRST":"SKIP TO HOLE "+(hole+1)+" →"
           ),
           // End round early — tucked away, small
           hole<9&&!activeAdventureCard&&!endRoundConfirm&&React.createElement('button',{onClick:function(){setEndRoundConfirm(true);},style:{width:"100%",padding:"8px 0",marginTop:"4px",background:"transparent",border:"1px solid "+C.red+"33",borderRadius:0,color:C.red+"77",fontFamily:BF,fontSize:"11px",cursor:"pointer",letterSpacing:1}},"⚠ END ROUND EARLY — CAMP NOW"),
@@ -1916,10 +1923,16 @@ function App(){
       React.createElement('div',{style:{background:C.gold+"12",border:"2px solid "+C.gold+"44",borderRadius:0,padding:"14px 16px",marginBottom:"10px"}},
         React.createElement('div',{style:{fontFamily:BF,fontSize:"16px",color:C.gold,marginBottom:"6px"}},"💰 SPEND GOLD"),
         React.createElement('div',{style:{fontFamily:BF,fontSize:"13px",color:C.whiteDim,lineHeight:1.6}},"Unlock new discs at 10gp each. Buy or sell treasure items at face value. Merchant class buys at half price."),
-        React.createElement('div',{style:{display:"flex",flexWrap:"wrap",gap:"8px",marginTop:"10px"}},
+        React.createElement('div',{style:{display:"flex",flexDirection:"column",gap:"8px",marginTop:"10px"}},
           questPlayersFromQuest.map(function(p){
-            return React.createElement('div',{key:p.id,style:{background:C.bgCard,border:"2px solid "+((p.cls&&p.cls.color)||C.borderBright),padding:"6px 12px",fontFamily:BF,fontSize:"13px",color:(p.cls&&p.cls.color)||C.gold}},
-              (p.cls&&p.cls.icon)||"❓"," ",p.name," 💰",p.gold
+            const isMerchant=p.cls&&p.cls.name==="Merchant";
+            const cost=isMerchant?5:10;
+            const canAfford=p.gold>=cost;
+            return React.createElement('div',{key:p.id,style:{display:"flex",alignItems:"center",gap:"8px"}},
+              React.createElement('div',{style:{background:C.bgCard,border:"2px solid "+((p.cls&&p.cls.color)||C.borderBright),padding:"6px 12px",fontFamily:BF,fontSize:"13px",color:(p.cls&&p.cls.color)||C.gold,flex:1}},
+                (p.cls&&p.cls.icon)||"❓"," ",p.name," 💰",p.gold,isMerchant?" (Merchant — half price)":""
+              ),
+              React.createElement('button',{onClick:function(){if(canAfford)applyGoldToPlayer(p.id,-cost);},style:{padding:"6px 12px",background:canAfford?C.gold+"18":"transparent",border:"2px solid "+(canAfford?C.gold:C.greyDim),borderRadius:0,color:canAfford?C.gold:C.greyDim,fontFamily:BF,fontSize:"12px",cursor:canAfford?"pointer":"default",whiteSpace:"nowrap"}},"-",cost,"gp 🥏")
             );
           })
         )
