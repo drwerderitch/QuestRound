@@ -322,20 +322,21 @@ const AdjBtn=function(props){
 // ── PROFICIENCY HELPER ────────────────────────────────────────────────────────
 // Returns a map of {playerId: profLevel} where profLevel is 0, 1, or 2
 // 1 = primary class passive fires free, 2 = both primary and multiclass fire free
-function getProficiencyMap(card, questPlayers) {
+// chosenApproach: if set, only that skill tag is used for proficiency
+function getProficiencyMap(card, questPlayers, chosenApproach) {
   var result = {};
   if (!card || !card.tags) return result;
-  var cardTags = card.tags.split(/[—,\-]/).map(function(s){return s.trim();}).filter(Boolean);
-  var isUniversal = cardTags.some(function(t){return t==="Universal";});
+  var allCardTags = card.tags.split(/[—,\-]/).map(function(s){return s.trim();}).filter(Boolean);
+  var isUniversal = allCardTags.some(function(t){return t==="Universal";});
+  // If a specific approach was chosen, only that skill counts
+  var cardTags = chosenApproach ? [chosenApproach] : allCardTags;
   (questPlayers||[]).forEach(function(p) {
-    if (isUniversal) { result[p.id] = 2; return; } // Universal: both passives fire free
+    if (isUniversal) { result[p.id] = 2; return; }
     var primarySkills = p.chosenSkills || [];
     var primaryMatch = primarySkills.some(function(s){return cardTags.includes(s);});
     if (!primaryMatch) { result[p.id] = 0; return; }
-    // Primary matches — check multiclass
-    var mc = p.multiclass; // {cls: classObject, sharedSkill: skillName}
+    var mc = p.multiclass;
     if (!mc || !mc.cls) { result[p.id] = 1; return; }
-    // Multiclass fires free on skills shared between both classes
     var sharedSkills = (p.cls ? p.cls.skills : []).filter(function(s){
       return mc.cls.skills.includes(s);
     });
@@ -343,6 +344,14 @@ function getProficiencyMap(card, questPlayers) {
     result[p.id] = multiMatch ? 2 : 1;
   });
   return result;
+}
+
+// Detect if a card has multiple exclusive skill choices (e.g. "Social — Stealth")
+function getApproachOptions(card) {
+  if (!card || !card.tags) return [];
+  var SKILL_SET = new Set(ALL_SKILLS);
+  var parts = card.tags.split(/[—,\-]/).map(function(s){return s.trim();}).filter(function(s){return SKILL_SET.has(s);});
+  return parts.length >= 2 ? parts : [];
 }
 // Legacy helper for non-score uses
 function getProficientPlayers(card, questPlayers) {
@@ -404,8 +413,9 @@ function CardOverlay({
 
   const isPersonal=card.scope==="Personal";
   const needsAssign=isPersonal&&(questPlayers&&questPlayers.length>0);
-  const proficiencyMap = getProficiencyMap(card, questPlayers||[]);
+  const proficiencyMap = getProficiencyMap(card, questPlayers||[], cardMeta.chosenApproach);
   const proficientIds = Object.keys(proficiencyMap).filter(function(id){return proficiencyMap[id]>0;}).map(Number);
+  const approachOptions = getApproachOptions(card);
 
   const pBtn=(p)=>({
     width:"100%",padding:"12px 14px",marginBottom:"6px",
@@ -607,6 +617,17 @@ function CardOverlay({
     };
 
     return React.createElement(React.Fragment,null,
+      // Approach choice for multi-skill cards
+      approachOptions.length>=2&&React.createElement('div',{style:{marginBottom:"12px"}},
+        React.createElement('div',{style:{fontFamily:BF,fontSize:"11px",color:C.grey,letterSpacing:2,marginBottom:"8px",borderBottom:`1px solid ${C.border}`,paddingBottom:"4px"}},"CHOOSE YOUR APPROACH"),
+        React.createElement('div',{style:{display:"flex",gap:"8px"}},
+          approachOptions.map(function(skill){
+            const chosen=cardMeta.chosenApproach===skill;
+            return React.createElement('button',{key:skill,onClick:function(){setCardMeta(function(prev){return{...prev,chosenApproach:skill};});},style:{flex:1,padding:"12px 8px",background:chosen?(SKILL_COLORS[skill]||C.gold)+"22":C.bgDark,border:"3px solid "+(chosen?(SKILL_COLORS[skill]||C.gold):C.greyDim),borderRadius:0,color:chosen?(SKILL_COLORS[skill]||C.gold):C.greyDim,fontFamily:BF,fontSize:"13px",cursor:"pointer"}},skill);
+          })
+        ),
+        cardMeta.chosenApproach&&React.createElement('div',{style:{fontFamily:BF,fontSize:"11px",color:SKILL_COLORS[cardMeta.chosenApproach]||C.gold,marginTop:"6px"}},"★ ",cardMeta.chosenApproach," approach selected — proficiency updated")
+      ),
       prePlay&&React.createElement('div',{style:{marginBottom:"12px"}},prePlay),
       sectionHdr("SCORE"),
       React.createElement('div',{style:{marginBottom:"10px"}},
@@ -1206,7 +1227,7 @@ function App(){
       // Build draw queue from hole scores
       const queue=[];
       const currentRound=(activeQuest&&activeQuest.currentRound)||1;
-      const resolveMap=getProficiencyMap(card, questPlayersFromQuest);
+      const resolveMap=getProficiencyMap(card, questPlayersFromQuest, cardMeta.chosenApproach);
       questPlayersFromQuest.forEach(p=>{
         const n=holeScores[p.id]||0;
         const newTee=n<0?"blue":n===0?"white":"red";
